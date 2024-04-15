@@ -1,44 +1,32 @@
 import xml.etree.ElementTree as ET
-import re
 
-# Carregar o arquivo XML
-tree = ET.parse('feed_psel.xml')
+xml_data = ET.parse('feed_psel.xml')
 root = tree.getroot()
 
-# Função para extrair a cor do título
-def extract_color_from_title(title):
-    # Lista de cores para exemplo
-    colors = ['vermelho', 'azul', 'verde', 'amarelo', 'preto', 'branco']
-    for color in colors:
-        if color in title.lower():
-            return color
-    return 'Indefinido'  # Retornar um valor padrão se nenhuma cor for encontrada
+def remover_produtos_fora_de_estoque(root):
+    for item in root.findall('item'):
+        availability = item.find('availability').text
+        if "Fora de estoque" in availability:
+            root.remove(item)
 
-# Função para corrigir os links das imagens
-def correct_image_link(link):
-    # Exemplo de correção: adicionar 'https://' se estiver faltando
-    if not link.startswith('http://') and not link.startswith('https://'):
-        return 'https://' + link
-    return link
+def adicionar_cor_aos_produtos(root):
+    for item in root.findall('item'):
+        id = item.find('id').text
+        color = item.find('color')
+        title = item.find('title').text
+        if color.text == 'null':
+            cor = title.split('-')[-1].strip().strip('"')
+            color.text = cor
 
-# Excluir produtos fora de estoque
-for product in root.findall('product'):
-    if product.find('stock').text == '0':  # Supondo que '0' signifique fora de estoque
-        root.remove(product)
+def corrigir_links_imagens(root):
+    for item in root.findall('item'):
+        id = item.find('id').text
+        image_link = item.find('image_link')
+        if ".mp3" in image_link.text:
+            image_link.text = image_link.text.replace('.mp3', '.jpg')
 
-# Adicionar cor aos produtos
-for product in root.findall('product'):
-    if product.get('id') in ['261557', '235840']:
-        title = product.find('title').text
-        color = extract_color_from_title(title)
-        product.find('color').text = color
+remover_produtos_fora_de_estoque(root)
+adicionar_cor_aos_produtos(root)
+corrigir_links_imagens(root)
 
-# Corrigir links das imagens
-for product in root.findall('product'):
-    if product.get('id') in ['246804', '217865']:
-        image_link = product.find('image_link').text
-        corrected_link = correct_image_link(image_link)
-        product.find('image_link').text = corrected_link
-
-# Exibir o feed XML com as alterações
 ET.dump(root)
